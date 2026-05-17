@@ -8,8 +8,9 @@ require_once("../inc/accessbility_controller.inc.php");
 if(isset($_POST['update'])){
 
 foreach ($_POST['id'] as $id) {
+$bardetech_id = isset($_POST['bardetech_plan_id'][$id]) ? trim($_POST['bardetech_plan_id'][$id]) : null;
 
-if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_POST['o_price'][$id],$_POST['bundle'][$id],$_POST['duration'][$id])){
+if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_POST['o_price'][$id],$_POST['bundle'][$id],$_POST['duration'][$id], $bardetech_id)){
   array_push($SITE_SUCCESS, "Data Bundle successfully edited");
 } else{
   array_push($SITE_ERRORS, "something went wrong!");
@@ -44,10 +45,6 @@ if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_
    ?>
 
 
-
-
-
-       
     <!--**********************************
             Content body start
         ***********************************-->
@@ -58,7 +55,6 @@ if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_
                     <div class="col-sm-6 p-md-0">
                         <div class="welcome-text">
                             <h4 style="color: #003366; font-size: 20px"><?= $PAGE_TITLE ?></h4>
-                            
                         </div>
                     </div>
                     <div class="col-sm-6 p-md-0 justify-content-sm-end mt-2 mt-sm-0 d-flex">
@@ -69,9 +65,17 @@ if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_
                     </div>
                 </div>
 
-
-
-
+                <!-- Bardetech info alert -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <strong>Bardetech Provider:</strong> Fill in the <strong>Bardetech Plan ID</strong> field for each bundle if you want to use Bardetech as your active provider. Leave it empty to use default provider (Datastation/Husmodata). Get plan IDs from your Bardetech dashboard.
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
       
                 <div class="row">
                     <div class="col-12">
@@ -80,19 +84,21 @@ if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_
                                 <h4 class="card-title"><?=$PAGE_TITLE ?></h4>
                             </div>
                             <div class="card-body">
-                            
 
                                 <form action="" method="POST" class="form-valide-with-icon">
-
                                     <div class="row">
 
                                       <?php
                                         if($sme_datas = $TopupController->Get_All_SME_Data()){
                                           foreach ($sme_datas as $sme_data) {
-                                           
                                       ?>
 
-                                      <div class="form-group col-md-3">
+                                      <div class="form-group col-md-12">
+                                          <hr>
+                                          <h6 class="text-muted">Bundle ID: <?=$sme_data->id?> | Network ID: <?=$sme_data->network_id?></h6>
+                                      </div>
+
+                                      <div class="form-group col-md-2">
                                             <label class="mb-1"><strong>Direct Price</strong></label>
                                             <div class="input-group">
                                            <input type="text" readonly="" name="d_price[<?=$sme_data->id?>]" value="<?= trim($sme_data->direct_price) ?>" required=""  class="form-control">
@@ -100,24 +106,34 @@ if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_
                                         </div>
                                     </div>
 
-                                        <div class="form-group col-md-3">
+                                        <div class="form-group col-md-2">
                                             <label class="mb-1"><strong>Our Price</strong></label>
                                             <div class="input-group">
                                            <input type="number" name="o_price[<?=$sme_data->id?>]" value="<?= $sme_data->our_price ?>" required="" class="form-control">
                                         </div>
                                     </div>
 
-                                      <div class="form-group col-md-3">
+                                      <div class="form-group col-md-2">
                                             <label class="mb-1"><strong>Data Bundle</strong></label>
                                             <div class="input-group">
                                           <input type="text" name="bundle[<?=$sme_data->id?>]" value="<?= $sme_data->data_bundle   ?>"  required="" class="form-control">
                                         </div>
                                     </div>
 
-                                    <div class="form-group col-md-3">
-                                            <label class="mb-1"><strong>Data Duration </strong></label>
+                                    <div class="form-group col-md-2">
+                                            <label class="mb-1"><strong>Data Duration</strong></label>
                                             <div class="input-group">
                                           <input type="text" name="duration[<?=$sme_data->id?>]" value="<?= $sme_data->data_duration ?>"  required="" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group col-md-4">
+                                            <label class="mb-1"><strong>Bardetech Plan ID <span class="text-warning">(for Bardetech provider)</span></strong></label>
+                                            <div class="input-group">
+                                          <input type="text" name="bardetech_plan_id[<?=$sme_data->id?>]" 
+                                                 value="<?= htmlspecialchars($sme_data->bardetech_plan_id ?? '') ?>"  
+                                                 placeholder="e.g. 523" 
+                                                 class="form-control">
                                         </div>
                                     </div>
 
@@ -128,8 +144,8 @@ if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_
                                 </div>
 
                                 <div class="text-center mt-4">
-                                            <button name="update" type="submit" value="update" class="btn btn-primary ">Update now</button>
-                                        </div>
+                                    <button name="update" type="submit" value="update" class="btn btn-primary">Update now</button>
+                                </div>
                             </form>
 
 
@@ -139,20 +155,11 @@ if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_
                  
                 </div>
 
-
-
-
-
-
-
-
             </div>
         </div>
         <!--**********************************
             Content body end
         ***********************************-->
-
- 
 
     </div>
  
