@@ -115,7 +115,7 @@ require_once '../inc/accessbility_controller.inc.php';
 
 
                                                         <?php if (
-                                                            $Airtime_result->Status == 'Successful' ||
+                                                            (strtolower($Airtime_result->Status ?? '') === 'successful') ||
                                                             isset($Airtime_result->id)
                                                         ) {
                                                             $status = 1;
