@@ -65,14 +65,17 @@ if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_
                     </div>
                 </div>
 
-                <!-- Bardetech info alert -->
+                <!-- Bardetech sync helper banner -->
                 <div class="row">
                     <div class="col-12">
-                        <div class="alert alert-info alert-dismissible fade show" role="alert">
-                            <strong>Bardetech Provider:</strong> Fill in the <strong>Bardetech Plan ID</strong> field for each bundle if you want to use Bardetech as your active provider. Leave it empty to use default provider (Datastation/Husmodata). Get plan IDs from your Bardetech dashboard.
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
+                        <div class="alert alert-info d-flex align-items-center justify-content-between flex-wrap" role="alert">
+                            <div>
+                                <strong>Bardetech Provider:</strong> Fill the <strong>Bardetech Plan ID</strong> for each bundle,
+                                or use <strong>Auto-Match</strong> to sync IDs from the live Bardetech API automatically.
+                            </div>
+                            <a href="manage-bardetech-plans.php" class="btn btn-sm btn-primary mt-2 mt-md-0 ml-md-3">
+                                View &amp; Sync Bardetech Plans
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -80,8 +83,11 @@ if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_
                 <div class="row">
                     <div class="col-12">
                         <div class="card">
-                            <div class="card-header">
-                                <h4 class="card-title"><?=$PAGE_TITLE ?></h4>
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h4 class="card-title mb-0"><?=$PAGE_TITLE ?></h4>
+                                <a href="manage-bardetech-plans.php" class="btn btn-outline-primary btn-sm">
+                                    Sync from Bardetech API
+                                </a>
                             </div>
                             <div class="card-body">
 
@@ -128,12 +134,20 @@ if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_
                                     </div>
 
                                     <div class="form-group col-md-4">
-                                            <label class="mb-1"><strong>Bardetech Plan ID <span class="text-warning">(for Bardetech provider)</span></strong></label>
+                                            <label class="mb-1">
+                                                <strong>Bardetech Plan ID</strong>
+                                                <span class="text-warning">(for Bardetech provider)</span>
+                                                <?php if (!empty($sme_data->bardetech_plan_id)): ?>
+                                                    <span class="badge badge-success ml-1">Set</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-secondary ml-1">Not set</span>
+                                                <?php endif; ?>
+                                            </label>
                                             <div class="input-group">
                                           <input type="text" name="bardetech_plan_id[<?=$sme_data->id?>]" 
                                                  value="<?= htmlspecialchars($sme_data->bardetech_plan_id ?? '') ?>"  
-                                                 placeholder="e.g. 523" 
-                                                 class="form-control">
+                                                 placeholder="e.g. 523 — or use Auto-Match above" 
+                                                 class="form-control <?= !empty($sme_data->bardetech_plan_id) ? 'border-success' : '' ?>">
                                         </div>
                                     </div>
 
@@ -145,6 +159,7 @@ if($TopupController->Update_SME_Data($_POST['id'][$id],$_POST['d_price'][$id],$_
 
                                 <div class="text-center mt-4">
                                     <button name="update" type="submit" value="update" class="btn btn-primary">Update now</button>
+                                    <a href="manage-bardetech-plans.php" class="btn btn-outline-info ml-2">Auto-Match from Bardetech API</a>
                                 </div>
                             </form>
 
