@@ -415,6 +415,60 @@ class TopupController extends C_base
         }
     }
 
+    /**
+     * Internal: fetch live plans from Bardetech API for a given network_id.
+     * Bardetech returns all networks in one response:
+     *   { "MTN_PLAN": [...], "GLO_PLAN": [...], "AIRTEL_PLAN": [...], "9MOBILE_PLAN": [...] }
+     * network_id mapping: 1=MTN, 2=GLO, 3=9MOBILE, 4=AIRTEL
+     * Returns array of plan objects or null on failure.
+     */
+    private function _fetchBardePlansLive($network_id)
+    {
+        $apiSetting = $this->GetAPISetting();
+        $token    = trim($apiSetting->api_key ?? '');
+        $url      = 'https://bardetech.com/api/network/?network_id=' . intval($network_id);
+
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL            => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_HTTPHEADER     => [
+                'Authorization: Token ' . $token,
+                'Content-Type: application/json',
+            ],
+        ]);
+        $response = curl_exec($curl);
+        curl_close($curl);
+
+        if (!$response) return null;
+        $decoded = json_decode($response);
+        if (json_last_error() !== JSON_ERROR_NONE) return null;
+
+        // Bardetech returns { "MTN_PLAN": [...], "GLO_PLAN": [...], ... }
+        // Pick the right key based on network_id
+        $networkKeyMap = [
+            1 => 'MTN_PLAN',
+            2 => 'GLO_PLAN',
+            3 => '9MOBILE_PLAN',
+            4 => 'AIRTEL_PLAN',
+        ];
+        $key = $networkKeyMap[intval($network_id)] ?? null;
+        if ($key && isset($decoded->$key) && is_array($decoded->$key)) {
+            return $decoded->$key;
+        }
+        // Fallback: return first array found in response
+        if (is_object($decoded)) {
+            foreach ((array)$decoded as $v) {
+                if (is_array($v) && count($v) > 0) return $v;
+            }
+        }
+        if (is_array($decoded)) return $decoded;
+        return null;
+    }
+
     public function GetCheapDataPlan($network_id)
     {
         // Check which provider is active
@@ -422,22 +476,31 @@ class TopupController extends C_base
         $providerName = strtolower($apiSetting->api_name ?? '');
 
         if ($providerName === 'bardetech') {
-            // For Bardetech: use bardetech_plan_id column if available
-            if (
-                $this->data = parent::$db->run_select(
-                    'SELECT t1.*, t2.data_type, t2.title FROM sme_data_tbl as t1 
-                    JOIN sme_data_type_tbl as t2 ON t1.data_type_id = t2.id
-                     WHERE t1.network_id = ? AND t1.bardetech_plan_id IS NOT NULL AND t1.bardetech_plan_id != ""',
-                    [$network_id]
-                )
-            ) {
-                // Override plan_id with bardetech_plan_id for purchase routing
-                foreach ($this->data as $item) {
-                    $item->plan_id = $item->bardetech_plan_id;
-                }
-                return json_encode($this->data);
+            // Fetch live plans directly from Bardetech API — no manual DB mapping needed
+            $plans = $this->_fetchBardePlansLive($network_id);
+            if (!$plans || !is_array($plans) || count($plans) === 0) {
+                return null;
             }
-            return null;
+
+            // Map Bardetech plan fields to the format cheap-data.php expects
+            $result = [];
+            foreach ($plans as $p) {
+                $planType = strtoupper(trim($p->plan_type ?? 'SME'));
+                // Generate a stable integer ID for each plan type string
+                $typeId   = abs(crc32($planType)) % 90000 + 10000;
+
+                $result[] = [
+                    'plan_id'      => $p->dataplan_id ?? ($p->id ?? ''),
+                    'data_type_id' => $typeId,
+                    'title'        => $planType,
+                    'data_bundle'  => $p->plan ?? '',
+                    'our_price'    => $p->plan_amount ?? 0,
+                    'direct_price' => $p->plan_amount ?? 0,
+                    'data_duration'=> $p->month_validate ?? '',
+                    'network_id'   => $network_id,
+                ];
+            }
+            return json_encode($result);
         }
 
         // Default: Datastation / Husmodata (original plan_id)
@@ -515,7 +578,34 @@ class TopupController extends C_base
     // }
     public function GetDataPlanType($network_id)
     {
-        // Use sme_data_type_tbl instead of plan_types
+        // When Bardetech is active, derive plan types from live API
+        $apiSetting   = $this->GetAPISetting();
+        $providerName = strtolower($apiSetting->api_name ?? '');
+
+        if ($providerName === 'bardetech') {
+            $plans = $this->_fetchBardePlansLive($network_id);
+            if (!$plans || !is_array($plans) || count($plans) === 0) {
+                return null;
+            }
+
+            $seen   = [];
+            $types  = [];
+            foreach ($plans as $p) {
+                $planType = strtoupper(trim($p->plan_type ?? 'SME'));
+                if (isset($seen[$planType])) continue;
+                $seen[$planType] = true;
+                $typeId = abs(crc32($planType)) % 90000 + 10000;
+                $types[] = [
+                    'id'         => $typeId,
+                    'title'      => $planType,
+                    'data_type'  => $planType,
+                    'network_id' => $network_id,
+                ];
+            }
+            return json_encode($types);
+        }
+
+        // Default: Datastation / Husmodata — use sme_data_type_tbl
         if (
             $this->data = parent::$db->run_select(
                 'SELECT DISTINCT t2.id, t2.title, t2.data_type, t1.network_id 
