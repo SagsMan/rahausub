@@ -29,15 +29,8 @@
                     // Combine prioritized links with the remaining links
                     $links = array_merge($prioritizedLinks, $remainingLinks);
 
-                    // Move the specific link to the beginning
-                    // $specificLink = array_filter($links, fn($link) => $link->link === 'verifications');
-                    // $remainingLinks = array_filter($links, fn($link) => $link->link !== 'verifications');
-
-                    // Combine the specific link with the remaining links
-                    // $links = array_merge($specificLink, $remainingLinks);
                     foreach ($links as $link) {
                         if ($link->has_sub == 0) { ?>
-
 
                          <li><a href="<?= $link->link ?>" class="ai-icon" aria-expanded="false">
                                  <i class="<?= $link->link_icon ?>"></i>
@@ -65,14 +58,50 @@
                              </ul>
                          </li>
 
-
-
-
              <?php }
                     }
                 } ?>
 
+             <!-- ── My Notifications (all users) ─────────────────────────── -->
+             <li>
+                 <a href="<?php echo SITE_URL . 'easyfinder/dashboard/my-notifications.php' ?>" class="ai-icon" aria-expanded="false">
+                     <i class="flaticon-381-notification"></i>
+                     <span class="nav-text">My Notifications</span>
+                 </a>
+             </li>
 
+             <!-- ── Referral (all users) ───────────────────────────────────── -->
+             <li>
+                 <a href="<?php echo SITE_URL . 'easyfinder/dashboard/referral.php' ?>" class="ai-icon" aria-expanded="false">
+                     <i class="flaticon-381-diploma-1"></i>
+                     <span class="nav-text">Referral</span>
+                 </a>
+             </li>
+
+             <!-- ── Notification Management (admin only) ──────────────────── -->
+             <?php
+             $role = (string)($Auth->admin_role ?? '');
+             $isSuperAdmin = !empty($Auth->super_admin) && $Auth->super_admin == 1;
+             $isAdmin = $isSuperAdmin || strpos($role, '1') !== false || strpos($role, '2') !== false || strpos($role, '3') !== false;
+             if ($isAdmin): ?>
+             <li>
+                 <a class="has-arrow ai-icon" href="javascript:void(0)" aria-expanded="false">
+                     <i class="flaticon-381-television"></i>
+                     <span class="nav-text">Notification Mgmt</span>
+                 </a>
+                 <ul aria-expanded="false">
+                     <li><a href="<?php echo SITE_URL . 'easyfinder/dashboard/admin-notifications.php' ?>">
+                         All Notifications
+                     </a></li>
+                     <li><a href="<?php echo SITE_URL . 'easyfinder/dashboard/admin-notification-create.php' ?>">
+                         Send Notification
+                     </a></li>
+                     <li><a href="<?php echo SITE_URL . 'easyfinder/dashboard/admin-notification-settings.php' ?>">
+                         Settings
+                     </a></li>
+                 </ul>
+             </li>
+             <?php endif; ?>
 
          </ul>
 
@@ -83,7 +112,6 @@
          </div>
          <div class="copyright">
              <p><strong>Azzeetech IT</strong> © 2021 All Rights Reserved</p>
-
          </div>
      </div>
  </div>
